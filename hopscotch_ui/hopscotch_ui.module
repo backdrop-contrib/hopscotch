@@ -1,0 +1,587 @@
+<?php
+
+// add enabled to defaults
+
+/**
+ * Implements hook_menu().
+ *
+ * @see
+ */
+function hopscotch_ui_menu() {
+  $items = array();
+
+  $items['admin/config/user-interface/hopscotch'] = array(
+    'title' => 'Joyride',
+    'page callback' => 'hopscotch_ui_list_hopscotchs',
+    'access arguments' => array('access administration pages'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+
+  $items['admin/config/user-interface/hopscotch/ui'] = array(
+    'title' => 'Joyride UI',
+    'access arguments' => array('access administration pages'),
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+  );
+  
+  $items['admin/config/user-interface/hopscotch/ui/%'] = array(
+    'title' => 'Joyride Editor',
+    'page callback' => 'backdrop_get_form',
+    'page arguments' => array('hopscotch_ui_edit_hopscotch', 5),
+    'access arguments' => array('access administration pages'),
+  );
+	$items['admin/config/user-interface/hopscotch/ui/%/disable'] = array(
+		'title' => 'Disable tour',
+		'page callback' => 'backdrop_get_form',
+		'page arguments' => array('hopscotch_ui_disable_hopscotch', 5),
+    'access arguments' => array('access administration pages'),
+		'type' => MENU_CALLBACK,
+	);  
+  $items['admin/config/user-interface/hopscotch/ui/add'] = array(
+    'title' => 'Add new tour',
+    'page callback' => 'backdrop_get_form',
+    'page arguments' => array('hopscotch_ui_edit_hopscotch', 5),
+    'access arguments' => array('access administration pages'),
+    'type' => MENU_LOCAL_ACTION,
+  );
+  
+  $items['admin/config/user-interface/hopscotch/demo'] = array(
+    'title' => 'Joyride Demo (Start tour automatically)',
+    'page callback' => 'theme',
+    'page arguments' => array('hopscotch_demo'),
+    'access arguments' => array('access administration pages'),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => -10,
+  );
+
+  $items['admin/config/user-interface/hopscotch/demo/auto-start'] = array(
+    'title' => 'Joyride Demo (Start tour automatically)',
+    'access arguments' => array('access administration pages'),
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -10,
+  );
+
+  $items['admin/config/user-interface/hopscotch/demo/manual-trigger'] = array(
+    'title' => 'Joyride Demo (Use manual trigger to start tour)',
+    'page callback' => 'theme',
+    'page arguments' => array('hopscotch_demo'),
+    'access arguments' => array('access administration pages'),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 10,
+  );
+
+  return $items;
+}
+
+/**
+ * Menu callback.
+ * Returns an administrative overview of all tours.
+ *
+ */
+function hopscotch_ui_list_hopscotchs() {
+  $items = hopscotch_load_all();
+  $rows = array();
+  foreach ($items as $name => $item) {
+    // Set variable for enabled state.
+    $state = $item['enabled'] ? 'Enabled' : 'Disabled';
+    
+    $row['title'] = $item['title'];
+    $row['description'] = $item['description'];
+    $row['auto_start'] = $item['auto_start'] ? 'TRUE' : 'FALSE';
+    $row['edit'] = (!$item['editable']) ? 'Not editable' : l('edit', 'admin/config/user-interface/hopscotch/ui/' . $name);
+    $row['disable'] = t("!state (!url)", array('!state' => $state, '!url' => l(t('change'), 'admin/config/user-interface/hopscotch/ui/' . $name . '/disable')));
+    $rows[] = $row;
+  }
+  if (!empty($rows)) {
+    $header = array(
+      t('Title'),
+      t('Description'),
+      t('Autostart'),
+      t('Edit link'),
+      t('Disable'),
+    );
+    $output = theme('table', array('header' => $header, 'rows' => $rows));
+    return $output;
+  }
+  else {
+    return t('There are no tours.');
+  }
+}
+
+/**
+ * Menu callback.
+ * Returns the confirm form to disable a tour.
+ *
+ */
+function hopscotch_ui_disable_hopscotch($form, &$form_state, $name) {
+  $tour = hopscotch_load($name);
+	$form = array();
+	$form['tour'] = array(
+		'#type' => 'value',
+		'#value' => $tour,
+	);
+  $set_enabled_status = $tour['enabled'] ? 'disable' : 'enable';
+  return confirm_form(
+    $form,
+    t("Are you sure you want to !disable this tour?", array('!disable' => $set_enabled_status)),
+    'admin/config/user-interface/hopscotch',
+    t(''),
+    t('Disable'),
+    t('Cancel')
+  );
+}
+
+/**
+ * Submit handler for hopscotch_ui_disable_hopscotch.
+ * This function is invoked only when the user clicks confirm button
+ * clickin on cancel, the user goes back to the $path.
+ */
+function hopscotch_ui_disable_hopscotch_submit($form, &$form_state) {
+  $tour = $form['tour']['#value'];
+
+  $set_enabled_status = $tour['enabled'] ? 0 : 1;
+  $config = config($tour['config_name']);
+  $config->set('tour.enabled', $set_enabled_status);
+  $config->save();
+
+	backdrop_set_message('Tour ' . $tour['title'] . ' settings saved.');
+  cache_flush('cache');
+	$form_state['redirect'] = 'admin/config/user-interface/hopscotch';
+}
+
+/**
+ * Returns a form to edit a tour.
+ *
+ */
+function hopscotch_ui_edit_hopscotch($form, &$form_state, $name) {
+  $form['#tree'] = TRUE;
+  
+  $tour = array();
+  if($name && $tour = hopscotch_load($name)) {
+  // dpm($tour);
+    backdrop_set_title($tour['title']);
+    backdrop_sort($tour['content'], array('weight' => SORT_NUMERIC));
+
+    $form['title'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Title'),
+      '#default_value' => isset($tour['title']) ? $tour['title'] : '',
+    );
+    $form['config_name'] = array(
+      '#type' => 'value',
+      '#value' => $tour['config_name'],
+    );
+    $form['machine_name'] = array(
+      '#type' => 'value',
+      '#value' => $tour['machine_name'],
+    );
+    $form['editable'] = array(
+      '#type' => 'value',
+      '#value' => $tour['editable'],
+    );
+  }
+  elseif($name =='add') {
+    $form['title'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Title'),
+      '#default_value' => isset($tour['title']) ? $tour['title'] : '',
+    );
+    $form['machine_name'] = array(
+      '#type' => 'machine_name',
+      '#default_value' => '',
+      '#maxlength' => 21,
+      '#machine_name' => array(
+        'exists' => 'hopscotch_machine_name_exists',
+        'source' => array('title'), 
+      ),
+    );
+    $form['editable'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Editable'),
+    );
+  }
+  else {
+    return array();
+  }
+  
+  $form['name'] = array(
+    '#type' => 'value',
+    '#value' => $name,
+  );
+  $form['paths'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Paths'),
+    '#rows' => 3,
+    '#default_value' => isset($tour['paths']) ? implode("\n", $tour['paths']) : '',
+    '#description' => t('Enter one path per line, for example "node/1" or @front for the front page.', array('@front' => '<front>')),
+    '#required' => TRUE,
+  );
+  $form['description'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Description'),
+    '#rows' => 3,
+    '#default_value' => isset($tour['description']) ? $tour['description'] : '',
+  );
+  $form['auto_start'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Auto Start'),
+    '#default_value' => isset($tour['auto_start']) ? $tour['auto_start'] : '',
+  );
+  $form['play_once'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Play Once'),
+    '#default_value' => isset($tour['play_once']) ? $tour['play_once'] : '',
+  );
+  $form['enabled'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Enabled'),
+    '#default_value' => isset($tour['enabled']) ? $tour['enabled'] : 1,
+  );
+  $form['content'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('People coming to the picnic'),
+    // Set up the wrapper so that AJAX will be able to replace the fieldset.
+    '#prefix' => '<div id="steps-fieldset-wrapper">',
+    '#suffix' => '</div>',
+  );
+  if (empty($form_state['content'])) {
+    if($name == 'add') {
+      $form_state['content'][0] = hopscotch_ui_get_default_step();
+    }
+    else {
+      $form_state['content'] = $tour['content'];
+    }
+  }
+  
+  foreach ($form_state['content'] as $i => $step) {
+  //$step = isset($tour['content'][$i]) ? $tour['content'][$i] : array();
+  $form['content'][$i]['title'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Tip title'),
+      '#default_value' => isset($step['title']) ? $step['title'] : '',
+    );
+    $form['content'][$i]['content'] = array(
+      '#type' => 'textarea',
+      '#title' => t('Tip content'),
+      '#rows' => 2,
+      '#default_value' => isset($step['content']) ? $step['content'] : '',
+    );
+    $form['content'][$i]['target'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Target'),
+      '#default_value' => isset($step['target']) ? $step['target'] : '',
+    );
+    $form['content'][$i]['placement'] = array(
+      '#type' => 'select',
+      '#title' => t('Placement'),
+      '#options' => backdrop_map_assoc(array('top', 'bottom', 'right', 'left')),
+      '#default_value' => isset($step['placement']) ? $step['placement'] : '',
+    );
+    $form['content'][$i]['optional'] = array(
+      '#type' => 'textarea',
+      '#title' => t('Optional fields'),
+      '#rows' => 4,
+      '#default_value' => isset($step['optional']) ? _rebuild_step_options($step['optional']) : '',
+      '#description' => t('Enter one key:value per line, for example "xOffset: 15" (without the quotes)'),
+    );
+    $form['content'][$i]['weight'] = array(
+      '#type' => 'weight',
+      '#title' => t('Weight'),
+      '#default_value' => isset($step['weight']) ? $step['weight'] : 10,
+      '#delta' => 10,
+      '#title_display' => 'invisible',
+    );
+    $form['content'][$i]['delete'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Delete'),
+      '#default_value' => 0,
+    );
+  }
+  $form['content']['add_more'] = array(
+    '#type' => 'submit',
+    '#value' => t('Add one more'),
+    '#submit' => array('hopscotch_ui_add_one'),
+    '#limit_validation_errors' => array(), 
+    // '#ajax' => array(
+      // 'callback' => 'hopscotch_ui_add_more_callback',
+      // 'wrapper' => 'steps-fieldset-wrapper',
+    // ),
+  );
+  $form['actions'] = array('#type' => 'actions');
+  $form['actions']['submit'] = array('#type' => 'submit', '#value' => t('Save Changes'));
+  return $form;
+}
+
+/**
+ * Render API callback: Checks if a field machine name is taken.
+ *
+ * @param $value
+ *   The machine name, not prefixed with 'field_'.
+ *
+ * @return
+ *   Whether or not the field machine name is taken.
+ */
+function hopscotch_machine_name_exists($value) {
+  $tours = hopscotch_load_all();
+  return isset($tours[$value]);
+}
+
+/**
+ * Callback for both ajax-enabled buttons.
+ *
+ * Selects and returns the fieldset with the names in it.
+ */
+function hopscotch_ui_add_more_callback($form, $form_state) {
+  return $form['content'];
+}
+
+function _rebuild_step_options($optionals) {
+  $lines = array();
+  foreach($optionals as $key => $option) {
+    $lines[] = $key . ':' . $option;
+  }
+  return implode("\n", $lines);
+}
+/**
+ * Submit handler for the "add-one-more" button.
+ *
+ * Increments the max counter and causes a rebuild.
+ */
+function hopscotch_ui_add_one($form, &$form_state) {
+  $form_state['content'][] = hopscotch_ui_get_default_step();
+  $form_state['rebuild'] = TRUE;
+}
+
+function hopscotch_ui_get_default_step() {
+  return array (
+    'title' => '',
+    'content' => '',
+    'target' => '',
+    'placement' => '',
+    'optional' => '',
+    'weight' => 10,
+  );
+}
+
+/**
+ * Form validation handler for hopscotch_ui_edit_hopscotch().
+ *
+ * @see hopscotch_ui_edit_hopscotch_submit().
+ */
+function hopscotch_ui_edit_hopscotch_validate($form, &$form_state) {
+  form_state_values_clean($form_state);
+  
+  unset($form_state['values']['actions']);
+  
+  // Cleanup multiline textareas
+  $paths = hopscotch_ui_format_lines($form_state['values']['paths']);
+  
+  // Validate paths
+  foreach($paths as $path) {
+    if(!menu_get_item($path) && $path != '<front>'){
+      form_set_error('paths', t('The path @path is invalid.', array('@path' => $path)));
+    }
+  }
+  $form_state['values']['paths'] = $paths;
+  
+  if(is_null($form_state['values']['content']) || (count($form_state['values']['content']) == 1 && $form_state['values']['content'][0]['delete'] == 1)) {
+    form_set_error('form', 'No steps to save');
+  }
+  
+  foreach($form_state['values']['content'] as $key => $content) {
+    $form_state['values']['content'][$key]['optional'] = hopscotch_ui_format_optional($form_state['values']['content'][$key]['optional']);
+    
+    if(!$content['content'] && !$content['title']) {
+      form_set_error('content', 'Steps must have a content or a title or both.');
+    }
+
+    if($content['delete']) {
+      unset($form_state['values']['content'][$key]);
+    }
+
+    unset($content['delete']);
+  }
+} 
+
+/**
+ * Form submission handler for hopscotch_ui_edit_hopscotch().
+ *
+ * @see hopscotch_ui_edit_hopscotch_validate().
+ */
+function hopscotch_ui_edit_hopscotch_submit($form, &$form_state) {  
+  $name = $form_state['values']['name'];
+  unset($form_state['values']['name']);
+  
+  $data = $form_state['values'];
+  $tour = array();
+  
+  // This is a new tour being added.
+  if($name == 'add') {
+    $config = config('tour.tour.' . $form_state['values']['machine_name']);
+    //$tours = $config->get('tours');
+  }
+  else {
+    $config = config($form_state['values']['config_name']);
+    //$tour = $config->get('tour');
+  }
+  //$tours[$form_state['values']['machine_name']] = $data;
+  $config->set('tour', $data);
+  $config->save();
+  cache_flush('cache');
+  $form_state['redirect'] = 'admin/config/user-interface/hopscotch/ui';
+}
+
+/**
+ * Cleans up input from multiline textareas.
+ *
+ */
+function hopscotch_ui_format_lines($text) {  
+  // Cleanup text
+  $text = explode("\n", $text);
+  $text = array_map('trim', $text);
+  $text = array_filter($text, 'strlen');
+  return $text;
+}
+
+/**
+ * Cleans up input from multiline textareas.
+ *
+ */
+function hopscotch_ui_format_optional($text) {  
+  // Cleanup text
+  $optionals = hopscotch_ui_format_lines($text);
+  $options = array();
+  foreach($optionals as $option) {
+    $split = explode(":", $option);
+    $options[$split[0]] = $split[1];
+  }
+  return $options;
+}
+
+/**
+ * Returns HTML for the Joyride edit form.
+ *
+ * @param $variables
+ *   An associative array containing:
+ *   - form: A render element representing the form.
+ *
+ * @ingroup themeable
+ */
+function theme_hopscotch_ui_edit_hopscotch($variables) {
+  $form = $variables['form'];
+  $rows = array();
+  $output = '';
+  $output .= backdrop_render($form['title']);
+  if(isset($form['machine_name'])) {
+    $output .= backdrop_render($form['machine_name']);
+  }
+  $output .= backdrop_render($form['paths']);
+  $output .= backdrop_render($form['description']);
+  $output .= backdrop_render($form['enabled']);
+  $output .= backdrop_render($form['editable']);
+  $output .= backdrop_render($form['auto_start']);
+  $output .= backdrop_render($form['play_once']);
+  
+  $add_more = $form['content']['add_more'];
+  unset($form['content']['add_more']);
+  
+  foreach (element_children($form['content']) as $id) {
+
+    $form['content'][$id]['weight']['#attributes']['class'] = array('hopscotch-ui-weight');
+    $rows[] = array(
+      'data' => array(
+        theme('hopscotch_content_row', $form['content'][$id]),
+        backdrop_render($form['content'][$id]['delete']),
+        backdrop_render($form['content'][$id]['weight']),
+      ),
+      'class' => array('draggable'),
+    );
+  }
+  unset($form['content']);
+
+  $header = array(t('Steps'), t('Delete'), t('Weight'));
+
+  $table_id = 'hopscotch-content';
+
+  $output .= theme('table', array(
+    'header' => $header,
+    'rows' => $rows,
+    'attributes' => array('id' => $table_id),
+  ));
+  $output .= backdrop_render($add_more);
+  $output .= backdrop_render_children($form);
+
+  backdrop_add_tabledrag($table_id, 'order', 'sibling', 'hopscotch-ui-weight');
+
+  return $output;
+}
+
+/**
+ * Returns HTML for a single step in the Joyride edit form.
+ *
+ * @param $variables
+ *   An associative array containing:
+ *   - form: A render element representing the form.
+ *
+ * @ingroup themeable
+ */
+function theme_hopscotch_content_row($content) {
+    $row['title'] = backdrop_render($content['title']);
+    $row['content'] = backdrop_render($content['content']);
+    $row['target'] = backdrop_render($content['target']);
+    $row['placement'] = backdrop_render($content['placement']);
+    $rows = array($row);
+
+    if (!empty($rows)) {
+    $header = array();
+    $output = theme('table', array('header' => $header, 'rows' => $rows));
+    
+    $attributes = backdrop_render($content['optional']);
+    
+    backdrop_add_js(backdrop_get_path('module', 'hopscotch_ui') . '/hopscotch_ui.js');
+    $toggle = ' <a class="requirements-toggle" href="#">' . t('more') . '</a>';
+    $details = '<div class="text table-filter-text-source"> ' . $toggle . '</div>' . '<div class="requirements">' . $attributes . '</div>';
+
+    $output .= $details;
+    return $output;
+  }
+  else {
+    return t('There are no items in the queue.');
+  }
+}
+
+/**
+ * Implements hook_theme().
+ *
+ */
+function hopscotch_ui_theme() {
+  return array(
+    // Theme function for the 'simple' example.
+    'hopscotch_ui_edit_hopscotch' => array(
+      'render element' => 'form',
+    ),
+    'hopscotch_content_row' => array(
+      'render element' => NULL,
+    ),
+    'hopscotch_demo' => array(
+      'variables' => array(),
+      'template' => 'templates/hopscotch-demo',
+    ),
+  );
+}
+
+ /**
+ * Implements hook_config_info().
+ * Provides two tour files: one with default tours for demo purposes and one 
+ * which is blank, for storing user-created tours.
+ */
+function hopscotch_ui_config_info() {
+  $prefixes['tour.tour.auto_start'] = array(
+    'label' => t('Joyride Default Tour - Autostart'),
+    'group' => t('Joyride'),
+  );
+  $prefixes['tour.tour.manual_trigger'] = array(
+    'label' => t('Joyride Custom Tour- Manual trigger'),
+    'group' => t('Joyride'),
+  );
+  return $prefixes;
+}

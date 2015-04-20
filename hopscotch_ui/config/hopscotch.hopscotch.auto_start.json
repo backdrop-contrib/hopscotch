@@ -1,0 +1,63 @@
+{
+    "_config_name": "tour.tour.auto_start",
+    "tour": {
+        "title": "Auto start demo",
+        "config_name": "tour.tour.auto_start",
+        "machine_name": "auto_start",
+        "editable": 1,
+        "paths": [
+            "admin/config/user-interface/hopscotch/demo"
+        ],
+        "description": "This Demo Tour is triggered automatically.",
+        "auto_start": 1,
+        "play_once": 0,
+        "enabled": 1,
+        "content": {
+            "0": {
+                "title": "Stop #1",
+                "content": "You can control all the details for you tour stop. Any valid HTML will work inside of Joyride.",
+                "target": "numero3",
+                "placement": "bottom",
+                "optional": [],
+                "weight": "0",
+                "delete": 0
+            },
+            "1": {
+                "title": "Stop #2",
+                "content": "Get the details right by styling Joyride with a custom stylesheet!",
+                "target": "numero2",
+                "placement": "bottom",
+                "optional": [],
+                "weight": "1",
+                "delete": 0
+            },
+            "2": {
+                "title": "Stop #3",
+                "content": "It works right aligned.",
+                "target": "numero3",
+                "placement": "bottom",
+                "optional": [],
+                "weight": "2",
+                "delete": 0
+            },
+            "3": {
+                "title": "Stop #4",
+                "content": "It works as a modal too!",
+                "target": "numero2",
+                "placement": "bottom",
+                "optional": [],
+                "weight": "3",
+                "delete": 0
+            },
+            "4": {
+                "title": "Stop #5",
+                "content": "Now what are you waiting for? Add this to your projects and get the most out of your apps!",
+                "placement": "bottom",
+                "target": "numero5",
+                "optional": [],
+                "weight": "4",
+                "delete": 0
+            }
+        }
+    }
+}

@@ -1,0 +1,270 @@
+<?php
+
+define('HOPSCOTCH_LIBRARY_VERSION', 'v0.2.3');
+
+/**
+ * Implements hook_libraries_info().
+ * Return information about external libraries.
+ *
+ * @see http://backdrop.org/documentation/modules/libraries
+ */
+function hopscotch_libraries_info() {
+  $libraries['hopscotch'] = array(
+    'name' => 'Hopscotch',
+    'vendor url' => 'http://www.zurb.com/',
+    'download url' => 'https://github.com/zurb/hopscotch',
+    'version callback' => 'hopscotch_version',
+/*     'version arguments' => array(
+      'file' => 'jquery.hopscotch-'.HOPSCOTCH_LIBRARY_VERSION.'.js',
+      // jQuery Foundation Joyride Plugin 2.0.2
+      'pattern' => '/jQuery Foundation Joyride Plugin ([\d][\d\.\0]+)/',
+      'lines' => 2,
+    ),
+ */    'files' => array(
+      'js' => array(
+        'hopscotch.js',
+      ),
+      'css' => array(
+        'hopscotch.css',
+      ),
+    ),
+  );
+
+  return $libraries;
+}
+
+/**
+ * Library version callback. Make sure the library version is correct.
+ */
+// function hopscotch_version($library, $options) {
+function hopscotch_version() {
+  return TRUE;
+  // Provide defaults.
+  $options += array(
+    'file' => '',
+    'pattern' => '',
+    'lines' => 20,
+    'cols' => 200,
+  );
+
+  $file = BACKDROP_ROOT . '/' . $library['library path'] . '/' . $options['file'];
+  if (empty($options['file']) || !file_exists($file)) {
+    return;
+  }
+  $file = fopen($file, 'r');
+  while ($options['lines'] && $line = fgets($file, $options['cols'])) {
+    if (preg_match($options['pattern'], $line, $version)) {
+      if ($version[1] == HOPSCOTCH_LIBRARY_VERSION) {
+        fclose($file);
+        return $version[1];
+      }
+    }
+    $options['lines']--;
+  }
+  fclose($file);
+}
+
+/**
+ * Implements hook_init().
+ * Perform setup tasks for non-cached page requests.
+ *
+ */
+function hopscotch_init() {
+  $tours = hopscotch_load_all();
+  $tours_to_run = array();
+  foreach($tours as $name => $tour) {
+    if($tour['enabled']) {
+      foreach($tour['paths'] as $path) {
+        if ($path == current_path() || $path == request_path() || ($path == '<front>' && request_path() == '')) {
+          $tours_to_run[] = $name;
+        }
+      }
+    }
+  }
+  hopscotch_add_tours($tours_to_run);
+}
+
+/**
+ *  Adds necessary javascript to the page to run a tour.
+ *  
+ */
+function hopscotch_add_tours($tours_to_run) {
+  //
+  
+  // Allow other modules to alter the tour.
+  //backdrop_alter('hopscotch_tour', $tour);
+
+  //$tips_content = json_encode($tour['content']);
+//  $tips_content = hopscotch_format_content($tour['content']);
+  //if(empty($tips_content)) return FALSE;
+  
+  $library = libraries_load('hopscotch');
+
+  $library_loaded = $library && !empty($library['loaded']);
+  backdrop_add_library('system', 'jquery.cookie');
+
+  $js_name = 'jquery.hopscotch.js';
+  $base_path = 'sites/all/libraries/hopscotch';
+
+  if (!$library_loaded) {
+    backdrop_set_message(t('Can\'t load Joyride library. Please download !url jQuery plugin and extract it to @path, so @js can be found at @full_path. Also please purge version info from Joyride file names (both .js and .css)', array(
+      '!url' => l(t('Zurb Joyride'), 'https://github.com/zurb/hopscotch'),
+      '@path' => $base_path,
+      '@js' => $js_name,
+      '@full_path' => $base_path . '/' . $js_name,
+    )), 'error');
+    return FALSE;
+  }
+
+  $tours = array();
+  foreach($tours_to_run as $tour_name) {
+    $tour = hopscotch_load($tour_name);
+    // Merge the values of the optional fields directly to the tour steps.
+    foreach($tour['content'] as $key => $content) {
+      $tour['content'][$key] = array_merge($content, $content['optional']);
+      unset($tour['content'][$key]['optional']);
+    }
+  // dpm($tour['content']);
+    $hopper['id'] = $tour_name;
+    $hopper['steps'] = $tour['content'];
+    $tours[$tour_name]['hopper'] = json_encode($hopper);
+    $tours[$tour_name]['auto_start'] = $tour['auto_start'];
+  }
+  
+  backdrop_add_js(backdrop_get_path('module', 'hopscotch') . '/inc/js/hopscotch_context.js', array('scope' => 'footer', 'weight' => 5));
+  backdrop_add_css(backdrop_get_path('module', 'hopscotch') . '/inc/hopscotch_context.css');
+  
+  $js_settings = array(
+    'hopscotchContext' => array(
+      'tours' => $tours,
+    ),
+  );
+  backdrop_add_js($js_settings, 'setting');
+}
+
+
+/**
+ * Format the tour content into <li> elements.
+ */
+function hopscotch_format_content($data) {
+  // If no tips content, end.
+  if(empty($data)) return FALSE;
+  
+  $list = '';
+  foreach($data as $step) {
+    $attributes = '';
+    foreach($step['attributes'] as $tag => $attr) {
+      $attributes .= $tag . '="' . $attr . '" ';
+    }
+    // Target attribute is in format #id or .class or may be blank. If not 
+    // blank, we need to first change the tag to data-id or data-class, then 
+    // remove the '#' or '.'
+    // If blank, remove it.
+    if(isset($step['target']) && $step['target'] != '') {
+      $tag = ($step['target'][0] == '#') ? 'data-id' : 'data-class';
+      $attr = substr($step['target'], 1);
+      $attributes .= $tag . '="' . $attr . '" ';
+    }
+    $list .= '<li ' . $attributes . '>';
+    $list .= '<h2>' . $step['header'] . '</h2>';
+    $list .= '<div class="hopscotch-content">' . $step['body'] . '</div>';
+    $list .= '</li>';
+  }
+  return $list;
+}
+
+
+/**
+ * Callback function for loading all tours.
+ */
+function hopscotch_load_all() {
+  $tours = &backdrop_static(__FUNCTION__);
+  if (!isset($tours)) {
+    if ($cache = cache_get('hopscotch_tours')) {
+      $tours = $cache->data;
+    }
+    else {
+      // Find all modules providing tours.
+      $all_tours = config_get_names_with_prefix('hopscotch');
+      $tours = array();
+      // Go through and load each config
+      foreach($all_tours as $tour) {
+        $config = config($tour);
+        // Load the 'tours' config key
+        $setting = $config->get('tour');
+        $setting['config_name'] = $tour;
+        $tours[$setting['machine_name']] = $setting;
+      }
+      cache_set('hopscotch_tours', $tours, 'cache');
+    }
+  }
+  return $tours;
+}
+
+/**
+ * Callback function for loading one tour by $name.
+ */
+function hopscotch_load($name) {
+  $tours = hopscotch_load_all();
+  if(isset($tours[$name])) {
+    return $tours[$name];
+  }
+  return array();
+}
+
+/**
+ * Implements hook_theme().
+ * Register a module (or theme's) theme implementations.
+ *
+ */
+function hopscotch_theme($existing, $type, $theme, $path) {
+  return array(
+    'hopscotch_tips' => array(
+      'variables' => array('tips_content' => NULL),
+      'template' => 'templates/hopscotch-tips',
+    ),
+    'hopscotch_help' => array(
+      'variables' => array(),
+      'template' => 'templates/hopscotch-help',
+    ),
+    'hopscotch_start_link' => array(
+      'variables' => array('link_title' => NULL, 'options' => array(), 'tour_name' => NULL),
+      'template' => 'templates/hopscotch-start-link',
+      'file' => 'inc/hopscotch.theme.inc',
+    ),
+  );
+}
+
+/**
+ * Implements hook_block_info().
+ * Define all blocks provided by the module.
+ *
+ */
+function hopscotch_block_info() {
+  $blocks['hopscotch_start_link'] = array(
+    'info' => t('Joyride Start Link'),
+    'description' => t('Provides a themed start link for Joyride tours.')
+  );
+
+  return $blocks;
+}
+
+/**
+ * Implements hook_block_view().
+ * Return a rendered or renderable view of a block.
+ *
+ */
+function hopscotch_block_view($delta = '') {
+  $block = array();
+
+  switch ($delta) {
+    case 'hopscotch_start_link':
+      $block['subject'] = '<none>';
+      $block['content'] = array(
+        '#theme' => 'hopscotch_start_link',
+      );
+      break;
+  }
+  return $block;
+}
+

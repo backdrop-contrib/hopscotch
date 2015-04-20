@@ -1,0 +1,6 @@
+; $Id$
+name = Hopscotch builder UI
+description = Provides a user interface for creating site tours with <a href="http://www.zurb.com/playground/jquery-hopscotch-feature-tour-plugin">Zurb Joyride</a> jQuery plugin for creating site tours of html elements.
+package = User Interface
+backdrop = 1.x
+;dependencies[] = hopscotch
