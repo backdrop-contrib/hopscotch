@@ -16,9 +16,11 @@ Backdrop Installation
 ---------------------
 
 1. Download the current, stable version from https://github.com/backdrop-contrib/hopscotch
-2. Download the current of Hopscotch at https://github.com/linkedin/hopscotch.
-3. Create a 'hopscotch' folder in ./libraries and copy `hopscotch.min.js` and 
-   `hopscotch.min.css` into this folder.
+2. Download the current of Hopscotch at https://github.com/linkedin/hopscotch 
+  and extract the contents. It should contain a `dist` folder.
+3. Create a 'hopscotch' folder in ./libraries and copy the contents of the 
+  `dist` folder into your `hopscotch` folder. The `hopscotch.min.js` file 
+  should therefore be found in ./libraries/hopscotch/js/hopscotch.min.js`.
 4. Enable the Hopscotch module and Libraries module
 5. Enable the Hopscotch UI module to view the demos and edit/add/delete tours 
 if needed
@@ -97,7 +99,7 @@ CURRENT MAINTAINERS
 CREDITS   
 --------------- 
 
-This module was based on Hopscotch module created for Drupal by Mark Koester 
+This module was based on [Joyride JQuery for Drupal Site Tours](https://www.drupal.org/project/joyride) created for Drupal by Mark Koester 
 ("Drupal user markwk":http://drupal.org/user/1094790/) 
 at "Int3c.com":http://int3c.com and 
 sponsored by "MicroEntrepreneur.me":http://microentrepreneur.me 

@@ -13,31 +13,31 @@ function hopscotch_requirements($phase) {
   $library = $library = libraries_detect('hopscotch');
   $library_installed = $library && !empty($library['installed']);
 
-  $js_name = 'hopscotch.min.js';
+  $js_name = 'js/hopscotch.min.js';
   $base_path = './libraries/hopscotch';
 
   switch ($phase) {
     case 'runtime':
+    $requirements['hopscotch'] = array(
+      'title' => $t('Hopscotch plugin'),
+      'value' => $t('Not installed'),
+      'severity' => REQUIREMENT_ERROR,
+      'description' => $t('Please download !url  plugin and extract it to @path, so @js can be found at @full_path. Also please purge version info from Hopscotch file names (both .js and .css)', array(
+        '!url' => l(t('Hopscotch'), 'https://github.com/linkedin/hopscotch'),
+        '@path' => $base_path,
+        '@js' => $js_name,
+        '@full_path' => $base_path . '/' . $js_name,
+      )
+    )
+    );
+    if ($library_installed) {
       $requirements['hopscotch'] = array(
         'title' => $t('Hopscotch plugin'),
-        'value' => $t('Not installed'),
-        'description' => $t('Please download !url  plugin and extract it to @path, so @js can be found at @full_path. Also please purge version info from Hopscotch file names (both .js and .css)', array(
-          '!url' => l(t('Hopscotch'), 'https://github.com/linkedin/hopscotch'),
-          '@path' => $base_path,
-          '@js' => $js_name,
-          '@full_path' => $base_path . '/' . $js_name,
-        ),
-        'severity' => REQUIREMENT_ERROR,
+        'value' => $t('Installed'),
+        'severity' => REQUIREMENT_OK,
       );
-
-      if ($library_installed) {
-        $requirements['hopscotch'] = array(
-          'title' => $t('Hopscotch plugin'),
-          'value' => $t('Installed'),
-          'severity' => REQUIREMENT_OK,
-        );
-      }
-      break;
+    }
+    break;
   }
 
   return $requirements;

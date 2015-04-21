@@ -11,16 +11,16 @@ function hopscotch_libraries_info() {
     'vendor url' => 'http://linkedin.github.io/hopscotch/',
     'download url' => 'https://github.com/linkedin/hopscotch',
     'version arguments' => array(
-      'file' => 'hopscotch.min.js',
+      'file' => 'js/hopscotch.min.js',
       'pattern' => '/hopscotch - v([\d][\d\.\0]+)/',
       'lines' => 1,
     ),
     'files' => array(
       'js' => array(
-        'hopscotch.min.js',
+        'js/hopscotch.min.js',
       ),
       'css' => array(
-        'hopscotch.min.css',
+        'css/hopscotch.min.css',
       ),
     ),
   );
@@ -69,7 +69,7 @@ function hopscotch_add_tours($active_tours) {
   $library_loaded = $library && !empty($library['loaded']);
   backdrop_add_library('system', 'jquery.cookie');
 
-  $js_name = 'hopscotch.min.js';
+  $js_name = 'js/hopscotch.min.js';
   $base_path = './libraries/hopscotch';
 
   if (!$library_loaded) {
@@ -84,15 +84,21 @@ function hopscotch_add_tours($active_tours) {
 
   $tours = array();
   foreach($active_tours as $tour_name => $tour) {
+    // Tour settings defaults
+    $tour_options = array(
+      'showPrevButton' => TRUE,
+    );
     // Allow other modules to alter the tour.
-    backdrop_alter('hopscotch_tour', $tour);
+    backdrop_alter('hopscotch_tour', $tour, $tour_options);
 
     // Merge the values of the optional fields directly to the tour steps.
     foreach($tour['content'] as $key => $content) {
       $tour['content'][$key] = array_merge($content, $content['optional']);
       unset($tour['content'][$key]['optional']);
     }
-
+    foreach($tour_options as $setting => $option) {
+      $hopper[$setting] = $option;
+    }
     $hopper['id'] = $tour_name;
     $hopper['steps'] = $tour['content'];
     $tours[$tour_name]['hopper'] = json_encode($hopper);
