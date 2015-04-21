@@ -74,10 +74,10 @@ the /config folder of the providing module then renamed to
 tour.<your_module>.<machine_name> (also rename the "_config_name" key in the 
 config file).
 This is useful if your wish your module to provide a guided tour of its 
-features. Joyride will automatically pick up your tour config.
+features. Hopscotch will automatically pick up your tour config.
 - Exported tours can be set to be editable or not.
 - Tours being created just for the use of the current site will be saved in 
-Joyride module's config folder. Careful not to mark them as not editable. If 
+Hopscotch module's config folder. Careful not to mark them as not editable. If 
 this happens, the module should be disabled and the config file manually edited 
 to set editable to "1".
 - Tour UI is not required for having site tours. Tours can be also written 
@@ -97,7 +97,7 @@ CURRENT MAINTAINERS
 CREDITS   
 --------------- 
 
-This module was based on Joyride module created for Drupal by Mark Koester 
+This module was based on Hopscotch module created for Drupal by Mark Koester 
 ("Drupal user markwk":http://drupal.org/user/1094790/) 
 at "Int3c.com":http://int3c.com and 
 sponsored by "MicroEntrepreneur.me":http://microentrepreneur.me 

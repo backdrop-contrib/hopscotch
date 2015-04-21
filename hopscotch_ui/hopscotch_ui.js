@@ -1,16 +1,13 @@
 (function ($) {
 
 /**
- * Filters the module list table by a text input search string.
+ * Hides the otional settings textarea in hopscotch_ui_edit_hopscotch().
  *
- * Additionally accounts for multiple tables being wrapped in "package" fieldset
- * elements.
  */
 Backdrop.behaviors.moduleFilterByText = {
   attach: function(context, settings) {
     var $form = $('#hopscotch-ui-edit-hopscotch');
 
-    // Hide the module requirements.
     $form.find('.requirements').hide();
 
     // Toggle the requirements info.

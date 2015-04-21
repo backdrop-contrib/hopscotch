@@ -4,9 +4,7 @@
   <div class="container">
     <div class="row">
       <div class="twelve columns">
-        <h1>ZURB's Joyride Feature Tour Plugin</h1>
-        <a href="http://www.zurb.com/playground/jquery_hopscotch_feature_tour_plugin" id="start">View Docs + Playground for Joyride</a>
-
+        <h1>Hopscotch Feature Tour Plugin</h1>
         <hr>
       </div>
     </div>
@@ -68,7 +66,7 @@
 
     <div class="row">
       <div class="six columns">
-        <h4>Make Every Click Count</h4>
+        <h4 id="numero4">Make Every Click Count</h4>
 
         <p>Aenean eu leo quam. Pellentesque ornare sem lacinia quam venenatis vestibulum. Curabitur blandit tempus porttitor. Aenean eu leo quam. Pellentesque ornare sem lacinia
           quam venenatis vestibulum. Aenean lacinia bibendum nulla sed consectetur. Cras mattis consectetur purus sit amet fermentum. Cras mattis consectetur purus sit amet

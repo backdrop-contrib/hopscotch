@@ -11,20 +11,20 @@ function hopscotch_ui_menu() {
   $items = array();
 
   $items['admin/config/user-interface/hopscotch'] = array(
-    'title' => 'Joyride',
-    'page callback' => 'hopscotch_ui_list_hopscotchs',
+    'title' => 'Hopscotch',
+    'page callback' => 'hopscotch_ui_list_hopscotch_tours',
     'access arguments' => array('access administration pages'),
     'type' => MENU_NORMAL_ITEM,
   );
 
   $items['admin/config/user-interface/hopscotch/ui'] = array(
-    'title' => 'Joyride UI',
+    'title' => 'Hopscotch UI',
     'access arguments' => array('access administration pages'),
     'type' => MENU_DEFAULT_LOCAL_TASK,
   );
   
   $items['admin/config/user-interface/hopscotch/ui/%'] = array(
-    'title' => 'Joyride Editor',
+    'title' => 'Hopscotch Editor',
     'page callback' => 'backdrop_get_form',
     'page arguments' => array('hopscotch_ui_edit_hopscotch', 5),
     'access arguments' => array('access administration pages'),
@@ -45,28 +45,25 @@ function hopscotch_ui_menu() {
   );
   
   $items['admin/config/user-interface/hopscotch/demo'] = array(
-    'title' => 'Joyride Demo (Start tour automatically)',
+    'title' => 'Hopscotch Demo (Start tour automatically)',
     'page callback' => 'theme',
     'page arguments' => array('hopscotch_demo'),
     'access arguments' => array('access administration pages'),
     'type' => MENU_LOCAL_TASK,
-    'weight' => -10,
   );
 
   $items['admin/config/user-interface/hopscotch/demo/auto-start'] = array(
-    'title' => 'Joyride Demo (Start tour automatically)',
+    'title' => 'Hopscotch Demo (Start tour automatically)',
     'access arguments' => array('access administration pages'),
     'type' => MENU_DEFAULT_LOCAL_TASK,
-    'weight' => -10,
   );
 
   $items['admin/config/user-interface/hopscotch/demo/manual-trigger'] = array(
-    'title' => 'Joyride Demo (Use manual trigger to start tour)',
+    'title' => 'Hopscotch Demo (Use manual trigger to start tour)',
     'page callback' => 'theme',
     'page arguments' => array('hopscotch_demo'),
     'access arguments' => array('access administration pages'),
     'type' => MENU_LOCAL_TASK,
-    'weight' => 10,
   );
 
   return $items;
@@ -77,7 +74,7 @@ function hopscotch_ui_menu() {
  * Returns an administrative overview of all tours.
  *
  */
-function hopscotch_ui_list_hopscotchs() {
+function hopscotch_ui_list_hopscotch_tours() {
   $items = hopscotch_load_all();
   $rows = array();
   foreach ($items as $name => $item) {
@@ -133,7 +130,7 @@ function hopscotch_ui_disable_hopscotch($form, &$form_state, $name) {
 /**
  * Submit handler for hopscotch_ui_disable_hopscotch.
  * This function is invoked only when the user clicks confirm button
- * clickin on cancel, the user goes back to the $path.
+ * clicking on cancel, the user goes back to the $path.
  */
 function hopscotch_ui_disable_hopscotch_submit($form, &$form_state) {
   $tour = $form['tour']['#value'];
@@ -157,7 +154,6 @@ function hopscotch_ui_edit_hopscotch($form, &$form_state, $name) {
   
   $tour = array();
   if($name && $tour = hopscotch_load($name)) {
-  // dpm($tour);
     backdrop_set_title($tour['title']);
     backdrop_sort($tour['content'], array('weight' => SORT_NUMERIC));
 
@@ -197,6 +193,7 @@ function hopscotch_ui_edit_hopscotch($form, &$form_state, $name) {
     $form['editable'] = array(
       '#type' => 'checkbox',
       '#title' => t('Editable'),
+      '#default_value' => 1,
     );
   }
   else {
@@ -253,8 +250,7 @@ function hopscotch_ui_edit_hopscotch($form, &$form_state, $name) {
   }
   
   foreach ($form_state['content'] as $i => $step) {
-  //$step = isset($tour['content'][$i]) ? $tour['content'][$i] : array();
-  $form['content'][$i]['title'] = array(
+    $form['content'][$i]['title'] = array(
       '#type' => 'textfield',
       '#title' => t('Tip title'),
       '#default_value' => isset($step['title']) ? $step['title'] : '',
@@ -280,7 +276,7 @@ function hopscotch_ui_edit_hopscotch($form, &$form_state, $name) {
       '#type' => 'textarea',
       '#title' => t('Optional fields'),
       '#rows' => 4,
-      '#default_value' => isset($step['optional']) ? _rebuild_step_options($step['optional']) : '',
+      '#default_value' => isset($step['optional']) && !empty($step['optional']) ? _rebuild_step_options($step['optional']) : '',
       '#description' => t('Enter one key:value per line, for example "xOffset: 15" (without the quotes)'),
     );
     $form['content'][$i]['weight'] = array(
@@ -331,9 +327,15 @@ function hopscotch_machine_name_exists($value) {
  * Selects and returns the fieldset with the names in it.
  */
 function hopscotch_ui_add_more_callback($form, $form_state) {
+  // Doesnt work
   return $form['content'];
 }
 
+/**
+ * Callback for both populating step options textareas.
+ *
+ * Rebuilds options in the format 'stepOption:value'.
+ */
 function _rebuild_step_options($optionals) {
   $lines = array();
   foreach($optionals as $key => $option) {
@@ -341,6 +343,7 @@ function _rebuild_step_options($optionals) {
   }
   return implode("\n", $lines);
 }
+
 /**
  * Submit handler for the "add-one-more" button.
  *
@@ -388,7 +391,28 @@ function hopscotch_ui_edit_hopscotch_validate($form, &$form_state) {
   }
   
   foreach($form_state['values']['content'] as $key => $content) {
-    $form_state['values']['content'][$key]['optional'] = hopscotch_ui_format_optional($form_state['values']['content'][$key]['optional']);
+    // Validate the optional settings textarea. Settings are input as one 
+    // key:value pair per line. We need to separate each line, then convert the 
+    // key:value string into array key and value.
+    
+    // First split the lines.
+    $optionals = hopscotch_ui_format_lines($form_state['values']['content'][$key]['optional']);
+    $options = array();
+    // If we got some lines, now split the pairs, using ":" as the delimiter
+    if($optionals) {
+      foreach($optionals as $option) {
+        $split = explode(":", $option, 2);
+        if(isset( $split[1])) {
+          $options[$split[0]] = $split[1];
+        }
+        else {
+          // If the split didnt return a value then the delimiter was missing,
+          // or something else equally tragic. We bail out here.
+          form_set_error('optional', 'One or more of your optional settings are invalid.');
+        }
+      }
+    }
+    $form_state['values']['content'][$key]['optional'] = $options;
     
     if(!$content['content'] && !$content['title']) {
       form_set_error('content', 'Steps must have a content or a title or both.');
@@ -416,14 +440,11 @@ function hopscotch_ui_edit_hopscotch_submit($form, &$form_state) {
   
   // This is a new tour being added.
   if($name == 'add') {
-    $config = config('tour.tour.' . $form_state['values']['machine_name']);
-    //$tours = $config->get('tours');
+    $config = config('hopscotch.hopscotch.' . $form_state['values']['machine_name']);
   }
   else {
     $config = config($form_state['values']['config_name']);
-    //$tour = $config->get('tour');
   }
-  //$tours[$form_state['values']['machine_name']] = $data;
   $config->set('tour', $data);
   $config->save();
   cache_flush('cache');
@@ -443,22 +464,7 @@ function hopscotch_ui_format_lines($text) {
 }
 
 /**
- * Cleans up input from multiline textareas.
- *
- */
-function hopscotch_ui_format_optional($text) {  
-  // Cleanup text
-  $optionals = hopscotch_ui_format_lines($text);
-  $options = array();
-  foreach($optionals as $option) {
-    $split = explode(":", $option);
-    $options[$split[0]] = $split[1];
-  }
-  return $options;
-}
-
-/**
- * Returns HTML for the Joyride edit form.
+ * Returns HTML for the Hopscotch edit form.
  *
  * @param $variables
  *   An associative array containing:
@@ -516,7 +522,7 @@ function theme_hopscotch_ui_edit_hopscotch($variables) {
 }
 
 /**
- * Returns HTML for a single step in the Joyride edit form.
+ * Returns HTML for a single step in the Hopscotch edit form.
  *
  * @param $variables
  *   An associative array containing:
@@ -575,13 +581,13 @@ function hopscotch_ui_theme() {
  * which is blank, for storing user-created tours.
  */
 function hopscotch_ui_config_info() {
-  $prefixes['tour.tour.auto_start'] = array(
-    'label' => t('Joyride Default Tour - Autostart'),
-    'group' => t('Joyride'),
+  $prefixes['hopscotch.hopscotch.auto_start'] = array(
+    'label' => t('Hopscotch Default Tour - Autostart'),
+    'group' => t('Hopscotch'),
   );
-  $prefixes['tour.tour.manual_trigger'] = array(
-    'label' => t('Joyride Custom Tour- Manual trigger'),
-    'group' => t('Joyride'),
+  $prefixes['hopscotch.hopscotch.manual_trigger'] = array(
+    'label' => t('Hopscotch Custom Tour- Manual trigger'),
+    'group' => t('Hopscotch'),
   );
   return $prefixes;
 }

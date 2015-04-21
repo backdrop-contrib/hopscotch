@@ -2,7 +2,7 @@
 
 function hopscotch_preprocess_hopscotch_start_link(&$vars) {
   if(empty($vars['options'])) $vars['options'] = array();
-// dpm($vars);
+
   if(!isset($vars['options']['attributes']['class'])) $vars['options']['attributes']['class'] = array();
   $vars['options']['attributes']['class'][] = 'hopscotch-start-link';
 

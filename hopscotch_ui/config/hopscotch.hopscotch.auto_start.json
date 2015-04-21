@@ -15,8 +15,8 @@
         "content": {
             "0": {
                 "title": "Stop #1",
-                "content": "You can control all the details for you tour stop. Any valid HTML will work inside of Joyride.",
-                "target": "numero3",
+                "content": "You can control all the details for you tour stop. Any valid HTML will work inside of Hopscotch.",
+                "target": "numero1",
                 "placement": "bottom",
                 "optional": [],
                 "weight": "0",
@@ -24,7 +24,7 @@
             },
             "1": {
                 "title": "Stop #2",
-                "content": "Get the details right by styling Joyride with a custom stylesheet!",
+                "content": "Get the details right.!",
                 "target": "numero2",
                 "placement": "bottom",
                 "optional": [],
@@ -35,16 +35,16 @@
                 "title": "Stop #3",
                 "content": "It works right aligned.",
                 "target": "numero3",
-                "placement": "bottom",
+                "placement": "right",
                 "optional": [],
                 "weight": "2",
                 "delete": 0
             },
             "3": {
                 "title": "Stop #4",
-                "content": "It works as a modal too!",
-                "target": "numero2",
-                "placement": "bottom",
+                "content": "And left!",
+                "target": "numero4",
+                "placement": "left",
                 "optional": [],
                 "weight": "3",
                 "delete": 0
