@@ -101,7 +101,7 @@ function hopscotch_add_tours($active_tours) {
     }
     $hopper['id'] = $tour_name;
     $hopper['steps'] = $tour['content'];
-    $tours[$tour_name]['hopper'] = json_encode($hopper);
+    $tours[$tour_name]['hopper'] = $hopper;
     $tours[$tour_name]['auto_start'] = $tour['auto_start'];
   }
   

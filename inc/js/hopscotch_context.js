@@ -2,25 +2,25 @@
   Backdrop.behaviors.hopscotchContext = {
     attach:function (context, settings) {
       if(!Backdrop.settings.hopscotchContext) return false;
-      // var auto_start = Backdrop.settings.hopscotchContext.auto_start || 'undefined';
-      // if(auto_start == 'undefined' ||auto_start == false) return false;
-
-      // var tips_content = Backdrop.settings.hopscotchContext.tips_content || 'undefined';
-      // if(tips_content == 'undefined') return false;
-
-      // if ($('ol#hopscotch-tips-content').length > 0) $('ol#hopscotch-tips-content').remove();
-
-      //$('body', context).append(tips_content);
       tours = Backdrop.settings.hopscotchContext.tours;
       $.each( tours, function( key, value ) {
-        console.log(tours);
         if(value["auto_start"]) {
-        hopscotch.startTour(JSON.parse(value["hopper"]));
-          
+          $.each( value["hopper"]['steps'], function( key, step ) {
+            t1 = step['target'];
+            q1 = step['query_selector'];
+            i1 = step['query_selector_index'];
+            if(q1) {
+              if(i1) {
+                value["hopper"]['steps'][key]['target'] = document.querySelectorAll(t1)[i1];
+              }
+              else {
+                value["hopper"]['steps'][key]['target'] = document.querySelector(t1);
+              }
+            }
+          });
+          hopscotch.startTour(value["hopper"]);
         }
       });
-
-      
     }
   };
 }(jQuery));

@@ -251,6 +251,7 @@ function hopscotch_ui_edit_hopscotch($form, &$form_state, $name) {
   foreach ($form_state['content'] as $i => $step) {
     $form['content'][$i]['title'] = array(
       '#type' => 'textfield',
+      '#size' => 20,
       '#title' => t('Tip title'),
       '#default_value' => isset($step['title']) ? $step['title'] : '',
     );
@@ -261,6 +262,7 @@ function hopscotch_ui_edit_hopscotch($form, &$form_state, $name) {
       '#default_value' => isset($step['content']) ? $step['content'] : '',
     );
     $form['content'][$i]['target'] = array(
+      '#size' => 20,
       '#type' => 'textfield',
       '#title' => t('Target'),
       '#default_value' => isset($step['target']) ? $step['target'] : '',
@@ -277,6 +279,18 @@ function hopscotch_ui_edit_hopscotch($form, &$form_state, $name) {
       '#rows' => 4,
       '#default_value' => isset($step['optional']) && !empty($step['optional']) ? _rebuild_step_options($step['optional']) : '',
       '#description' => t('Enter one key:value per line, for example "xOffset: 15" (without the quotes)'),
+    );
+    $form['content'][$i]['query_selector'] = array(
+      '#type' => 'checkbox',
+      '#title' => t("Use 'document.querySelector()'"),
+      '#default_value' => isset($step['query_selector']) ? $step['query_selector'] : 0,
+    );
+    $form['content'][$i]['query_selector_index'] = array(
+      '#type' => 'textfield',
+      '#size' => 4,
+      '#maxlength' => 3,
+      '#default_value' => isset($step['query_selector_index']) ? $step['query_selector_index'] : 0,
+      '#description' => t('Enter the querySelector index'),
     );
     $form['content'][$i]['weight'] = array(
       '#type' => 'weight',
@@ -481,6 +495,8 @@ function hopscotch_ui_format_lines($text) {
  * @ingroup themeable
  */
 function theme_hopscotch_ui_edit_hopscotch($variables) {
+  backdrop_add_js(backdrop_get_path('module', 'hopscotch_ui') . '/hopscotch_ui.js');
+  backdrop_add_css(backdrop_get_path('module', 'hopscotch_ui') . '/css/hopscotch_ui.css');
   $form = $variables['form'];
   $rows = array();
   $output = '';
@@ -539,19 +555,24 @@ function theme_hopscotch_ui_edit_hopscotch($variables) {
  * @ingroup themeable
  */
 function theme_hopscotch_content_row($content) {
-    $row['title'] = backdrop_render($content['title']);
+    $row['title'] = backdrop_render($content['title']). backdrop_render($content['target']);
     $row['content'] = backdrop_render($content['content']);
-    $row['target'] = backdrop_render($content['target']);
     $row['placement'] = backdrop_render($content['placement']);
     $rows = array($row);
 
     if (!empty($rows)) {
     $header = array();
-    $output = theme('table', array('header' => $header, 'rows' => $rows));
+    $output = theme('table', array(
+      'header' => $header, 
+      'rows' => $rows,
+      'attributes' => array('class' => 'hopscotch-content-row'),
+      )
+    );
     
     $attributes = backdrop_render($content['optional']);
+    $attributes .= backdrop_render($content['query_selector']);
+    $attributes .= backdrop_render($content['query_selector_index']);
     
-    backdrop_add_js(backdrop_get_path('module', 'hopscotch_ui') . '/hopscotch_ui.js');
     $toggle = ' <a class="requirements-toggle" href="#">' . t('more') . '</a>';
     $details = '<div class="text table-filter-text-source"> ' . $toggle . '</div>' . '<div class="requirements">' . $attributes . '</div>';
 
