@@ -73,7 +73,7 @@ Tour UI
 folder (in files//active).
 - If providing a tour with your module, this config file should be copied to 
 the /config folder of the providing module then renamed to 
-tour.<your_module>.<machine_name> (also rename the "_config_name" key in the 
+hopscotch.<your_module>.<machine_name> (also rename the "_config_name" key in the 
 config file).
 This is useful if your wish your module to provide a guided tour of its 
 features. Hopscotch will automatically pick up your tour config.

@@ -45,6 +45,7 @@ function hopscotch_init() {
  */
 function hopscotch_get_path_tours() {
   $tours = hopscotch_load_all();
+  dpm($tours);
   $active_tours = array();
   foreach($tours as $name => $tour) {
     if($tour['enabled']) {
@@ -132,10 +133,8 @@ function hopscotch_load_all() {
       // Go through and load each config
       foreach($all_tours as $tour) {
         $config = config($tour);
-        // Load the 'tours' config key
-        $setting = $config->get('tour');
-        $setting['config_name'] = $tour;
-        $tours[$setting['machine_name']] = $setting;
+        $data = $config->get();
+        $tours[$data['machine_name']] = $data;
       }
       cache_set('hopscotch_tours', $tours, 'cache');
     }

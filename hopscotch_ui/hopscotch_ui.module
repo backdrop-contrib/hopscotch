@@ -24,9 +24,15 @@ function hopscotch_ui_menu() {
   );
   
   $items['admin/config/user-interface/hopscotch/ui/%'] = array(
-    'title' => 'Hopscotch Editor',
+    'title' => 'Tour editor',
     'page callback' => 'backdrop_get_form',
     'page arguments' => array('hopscotch_ui_edit_hopscotch', 5),
+    'access arguments' => array('access administration pages'),
+  );
+  $items['admin/config/user-interface/hopscotch/ui/%/clone'] = array(
+    'title' => 'Clone tour',
+    'page callback' => 'backdrop_get_form',
+    'page arguments' => array('hopscotch_ui_edit_hopscotch', 5, 6),
     'access arguments' => array('access administration pages'),
   );
 	$items['admin/config/user-interface/hopscotch/ui/%/disable'] = array(
@@ -136,7 +142,7 @@ function hopscotch_ui_disable_hopscotch_submit($form, &$form_state) {
   $tour = $form['tour']['#value'];
 
   $set_enabled_status = $tour['enabled'] ? 0 : 1;
-  $config = config($tour['config_name']);
+  $config = config('hopscotch.' . $tour['module'] . '.' . $tour['machine_name']);
   $config->set('tour.enabled', $set_enabled_status);
   $config->save();
 
@@ -149,25 +155,44 @@ function hopscotch_ui_disable_hopscotch_submit($form, &$form_state) {
  * Returns a form to edit a tour.
  *
  */
-function hopscotch_ui_edit_hopscotch($form, &$form_state, $name) {
+function hopscotch_ui_edit_hopscotch($form, &$form_state, $name, $op) {
   $form['#tree'] = TRUE;
   
   $tour = array();
   if($name && $tour = hopscotch_load($name)) {
-    backdrop_set_title($tour['title']);
-
-    $form['title'] = array(
-      '#type' => 'textfield',
-      '#title' => t('Title'),
-      '#default_value' => isset($tour['title']) ? $tour['title'] : '',
-    );
-    $form['config_name'] = array(
+    if ($op && $op == 'clone') {
+      backdrop_set_title(t('Cloning ') . $tour['title']);
+      dpm($tour);
+      $form['title'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Title'),
+        '#default_value' => isset($tour['title']) ? t('Clone of '). $tour['title'] : '',
+      );
+      $form['machine_name'] = array(
+        '#type' => 'machine_name',
+        '#default_value' => $tour['machine_name'] . '_clone',
+        '#maxlength' => 21,
+        '#machine_name' => array(
+          'exists' => 'hopscotch_machine_name_exists',
+          'source' => array('title'), 
+        ),
+      );
+    }
+    else {
+      backdrop_set_title($tour['title']);
+      $form['title'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Title'),
+        '#default_value' => isset($tour['title']) ? $tour['title'] : '',
+      );
+      $form['machine_name'] = array(
+        '#type' => 'value',
+        '#value' => $tour['machine_name'],
+      );
+    }
+    $form['module'] = array(
       '#type' => 'value',
-      '#value' => $tour['config_name'],
-    );
-    $form['machine_name'] = array(
-      '#type' => 'value',
-      '#value' => $tour['machine_name'],
+      '#value' => $tour['module'],
     );
     $form['editable'] = array(
       '#type' => 'value',
@@ -463,12 +488,16 @@ function hopscotch_ui_edit_hopscotch_submit($form, &$form_state) {
   // This is a new tour being added.
   if($name == 'add') {
     $config = config('hopscotch.hopscotch.' . $form_state['values']['machine_name']);
+    $config->setData($data);
+    $config->save();
   }
   else {
-    $config = config($form_state['values']['config_name']);
+    // Rebuild the config name in case we're cloning.
+    $config_name = 'hopscotch.' . $form_state['values']['module'] . '.' . $form_state['values']['machine_name'];
+    $config = config($config_name);
+    $config->setData($data);
+    $config->save();
   }
-  $config->set('tour', $data);
-  $config->save();
   cache_flush('cache');
   $form_state['redirect'] = 'admin/config/user-interface/hopscotch/ui';
 }
@@ -619,4 +648,29 @@ function hopscotch_ui_config_info() {
     'group' => t('Hopscotch'),
   );
   return $prefixes;
+}
+
+function hopscotch_ui_admin_bar_output_build(&$content) {
+  // In case your implementation provides a configurable component, check
+  // whether the component should be displayed:
+  // if (in_array('shortcut.links', $content['#components']) && !$content['#complete']) {
+    // return;
+  // }
+
+  $destination = backdrop_get_destination();
+
+  $content['extra']['extra']['my_item'] = array(
+    '#title' => theme('admin_bar_icon'),
+    '#attributes' => array('class' => array('admin-bar-icon')),
+    '#href' => '<front>',
+    '#options' => array(
+      'html' => TRUE,
+    ),
+  );
+  $content['extra']['extra']['my_item']['my_item'] = array(
+    '#title' => t('Run cron'),
+    '#weight' => 50,
+    '#access' => user_access('administer site configuration'),
+    '#href' => 'admin/reports/status/run-cron',
+  );
 }
