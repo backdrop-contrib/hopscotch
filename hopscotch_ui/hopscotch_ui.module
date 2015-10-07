@@ -38,7 +38,14 @@ function hopscotch_ui_menu() {
 	$items['admin/config/user-interface/hopscotch/ui/%/disable'] = array(
 		'title' => 'Disable tour',
 		'page callback' => 'backdrop_get_form',
-		'page arguments' => array('hopscotch_ui_disable_hopscotch', 5),
+		'page arguments' => array('hopscotch_ui_disable_hopscotch', 5, 6),
+    'access arguments' => array('access administration pages'),
+		'type' => MENU_CALLBACK,
+	);  
+	$items['admin/config/user-interface/hopscotch/ui/%/revert'] = array(
+		'title' => 'Disable tour',
+		'page callback' => 'backdrop_get_form',
+		'page arguments' => array('hopscotch_ui_disable_hopscotch', 5, 6),
     'access arguments' => array('access administration pages'),
 		'type' => MENU_CALLBACK,
 	);  
@@ -84,14 +91,49 @@ function hopscotch_ui_list_hopscotch_tours() {
   $items = hopscotch_load_all();
   $rows = array();
   foreach ($items as $name => $item) {
-    // Set variable for enabled state.
-    $state = $item['enabled'] ? 'Enabled' : 'Disabled';
+    if ($item['storage'] === HOPSCOTCH_STORAGE_DEFAULT) {
+      $storage = t('Default');
+      $delete_link = '';
+    }
+    elseif ($item['storage'] === HOPSCOTCH_STORAGE_OVERRIDE) {
+      $storage = t('Overridden');
+      $delete_link = t('Revert');
+    }
+    elseif ($item['storage'] === HOPSCOTCH_STORAGE_NORMAL) {
+      $storage = t('User-provided');
+      $delete_link = t('Delete');
+    }
+    $links = array();
     
+    if ($item['editable']) {
+      $links['edit'] = array(
+        'title' => t('Edit'),
+        'href' => 'admin/config/user-interface/hopscotch/ui/' . $name,
+      );
+    }
+    $links['disable'] = array(
+      'title' => $item['enabled'] ? t('Disable') : t('Enable'),
+      'href' => 'admin/config/user-interface/hopscotch/ui/' . $name . '/disable',
+    );
+    $links['clone'] = array(
+      'title' => 'Clone',
+      'href' => 'admin/config/user-interface/hopscotch/ui/' . $name . '/clone',
+    );
+    $links['delete'] = array(
+      'title' => $delete_link,
+      'href' => 'admin/config/user-interface/hopscotch/ui/' . $name . '/revert',
+    );
+
+    $dropbutton = array(
+      '#type' => 'dropbutton',
+      '#links' => $links,
+    );
+
     $row['title'] = $item['title'];
     $row['description'] = $item['description'];
     $row['auto_start'] = $item['auto_start'] ? 'TRUE' : 'FALSE';
-    $row['edit'] = (!$item['editable']) ? 'Not editable' : l('edit', 'admin/config/user-interface/hopscotch/ui/' . $name);
-    $row['disable'] = t("!state (!url)", array('!state' => $state, '!url' => l(t('change'), 'admin/config/user-interface/hopscotch/ui/' . $name . '/disable')));
+    $row['storage'] = $storage;
+    $row['operations'] = backdrop_render($dropbutton);
     $rows[] = $row;
   }
   if (!empty($rows)) {
@@ -99,8 +141,8 @@ function hopscotch_ui_list_hopscotch_tours() {
       t('Title'),
       t('Description'),
       t('Autostart'),
-      t('Edit link'),
-      t('Disable'),
+      t('Status'),
+      t('Operations'),
     );
     $output = theme('table', array('header' => $header, 'rows' => $rows));
     return $output;
@@ -115,14 +157,23 @@ function hopscotch_ui_list_hopscotch_tours() {
  * Returns the confirm form to disable a tour.
  *
  */
-function hopscotch_ui_disable_hopscotch($form, &$form_state, $name) {
+function hopscotch_ui_disable_hopscotch($form, &$form_state, $name, $op) {
   $tour = hopscotch_load($name);
 	$form = array();
 	$form['tour'] = array(
 		'#type' => 'value',
 		'#value' => $tour,
 	);
-  $set_enabled_status = $tour['enabled'] ? 'disable' : 'enable';
+	$form['operation'] = array(
+		'#type' => 'value',
+		'#value' => $op,
+	);
+  if ($op == 'disable') {
+    $set_enabled_status = $tour['enabled'] ? t('disable') : t('enable');
+  }
+  elseif ($op == 'revert') {
+    $set_enabled_status = ($tour['storage'] === HOPSCOTCH_STORAGE_OVERRIDE) ? t('revert') : t('delete');
+  }
   return confirm_form(
     $form,
     t("Are you sure you want to !disable this tour?", array('!disable' => $set_enabled_status)),
@@ -140,29 +191,51 @@ function hopscotch_ui_disable_hopscotch($form, &$form_state, $name) {
  */
 function hopscotch_ui_disable_hopscotch_submit($form, &$form_state) {
   $tour = $form['tour']['#value'];
+  $op = $form['operation']['#value'];
+  
+  if ($op == 'revert') {
+    hopscotch_ui_process_hopscotch_delete($form, $form_state);
+  }
+  else {
+    $set_enabled_status = $tour['enabled'] ? 0 : 1;
+    $config = config('hopscotch.' . $tour['module'] . '.' . $tour['machine_name']);
+    $config->set('enabled', $set_enabled_status);
+    $config->save();
+    backdrop_set_message('Tour ' . $tour['title'] . ' settings saved.');
+  }
 
-  $set_enabled_status = $tour['enabled'] ? 0 : 1;
-  $config = config('hopscotch.' . $tour['module'] . '.' . $tour['machine_name']);
-  $config->set('tour.enabled', $set_enabled_status);
-  $config->save();
-
-	backdrop_set_message('Tour ' . $tour['title'] . ' settings saved.');
   cache_flush('cache');
 	$form_state['redirect'] = 'admin/config/user-interface/hopscotch';
+}
+
+/**
+ * Submit handler for hopscotch_ui_disable_hopscotch if delete/revert requested.
+ */
+function hopscotch_ui_process_hopscotch_delete($form, &$form_state) {
+  $tour = $form['tour']['#value'];
+  $tour_config = 'hopscotch.' . $tour['module'] . '.' . $tour['machine_name'];
+  config($tour_config)->delete();
+  if ($tour['storage'] === HOPSCOTCH_STORAGE_OVERRIDE) {
+    // Restore the module-provided config.
+    config_install_default_config($tour['module'], $tour_config);
+    backdrop_set_message('Tour ' . $tour['title'] . ' has been reverted.');
+  }
+  else {
+    backdrop_set_message('Tour ' . $tour['title'] . ' was deleted.');
+  }
 }
 
 /**
  * Returns a form to edit a tour.
  *
  */
-function hopscotch_ui_edit_hopscotch($form, &$form_state, $name, $op) {
+function hopscotch_ui_edit_hopscotch($form, &$form_state, $name, $op = NULL) {
   $form['#tree'] = TRUE;
   
   $tour = array();
   if($name && $tour = hopscotch_load($name)) {
     if ($op && $op == 'clone') {
       backdrop_set_title(t('Cloning ') . $tour['title']);
-      dpm($tour);
       $form['title'] = array(
         '#type' => 'textfield',
         '#title' => t('Title'),
@@ -227,6 +300,10 @@ function hopscotch_ui_edit_hopscotch($form, &$form_state, $name, $op) {
   $form['name'] = array(
     '#type' => 'value',
     '#value' => $name,
+  );
+  $form['op'] = array(
+    '#type' => 'value',
+    '#value' => $op,
   );
   $form['paths'] = array(
     '#type' => 'textarea',
@@ -479,6 +556,7 @@ function hopscotch_ui_edit_hopscotch_validate($form, &$form_state) {
  */
 function hopscotch_ui_edit_hopscotch_submit($form, &$form_state) {  
   $name = $form_state['values']['name'];
+  $op = $form_state['values']['op'];
   unset($form_state['values']['name']);
   backdrop_sort($form_state['values']['content'], array('weight' => SORT_NUMERIC));
   $form_state['values']['content'] = array_values($form_state['values']['content']);
@@ -487,6 +565,7 @@ function hopscotch_ui_edit_hopscotch_submit($form, &$form_state) {
   
   // This is a new tour being added.
   if($name == 'add') {
+    $data['storage'] = HOPSCOTCH_STORAGE_NORMAL;
     $config = config('hopscotch.hopscotch.' . $form_state['values']['machine_name']);
     $config->setData($data);
     $config->save();
@@ -494,6 +573,15 @@ function hopscotch_ui_edit_hopscotch_submit($form, &$form_state) {
   else {
     // Rebuild the config name in case we're cloning.
     $config_name = 'hopscotch.' . $form_state['values']['module'] . '.' . $form_state['values']['machine_name'];
+
+    // If cloning, this becomes a  user-provided tour.
+    if ($op == 'clone') {
+      $data['storage'] == HOPSCOTCH_STORAGE_NORMAL;
+    }
+    elseif ($data['storage'] == HOPSCOTCH_STORAGE_DEFAULT) {
+      $data['storage'] == HOPSCOTCH_STORAGE_OVERRIDE;
+    }
+
     $config = config($config_name);
     $config->setData($data);
     $config->save();
@@ -639,38 +727,13 @@ function hopscotch_ui_theme() {
  * which is blank, for storing user-created tours.
  */
 function hopscotch_ui_config_info() {
-  $prefixes['hopscotch.hopscotch.auto_start'] = array(
+  $prefixes['hopscotch.hopscotch_ui.auto_start'] = array(
     'label' => t('Hopscotch Default Tour - Autostart'),
     'group' => t('Hopscotch'),
   );
-  $prefixes['hopscotch.hopscotch.manual_trigger'] = array(
+  $prefixes['hopscotch.hopscotch_ui.manual_trigger'] = array(
     'label' => t('Hopscotch Custom Tour- Manual trigger'),
     'group' => t('Hopscotch'),
   );
   return $prefixes;
-}
-
-function hopscotch_ui_admin_bar_output_build(&$content) {
-  // In case your implementation provides a configurable component, check
-  // whether the component should be displayed:
-  // if (in_array('shortcut.links', $content['#components']) && !$content['#complete']) {
-    // return;
-  // }
-
-  $destination = backdrop_get_destination();
-
-  $content['extra']['extra']['my_item'] = array(
-    '#title' => theme('admin_bar_icon'),
-    '#attributes' => array('class' => array('admin-bar-icon')),
-    '#href' => '<front>',
-    '#options' => array(
-      'html' => TRUE,
-    ),
-  );
-  $content['extra']['extra']['my_item']['my_item'] = array(
-    '#title' => t('Run cron'),
-    '#weight' => 50,
-    '#access' => user_access('administer site configuration'),
-    '#href' => 'admin/reports/status/run-cron',
-  );
 }

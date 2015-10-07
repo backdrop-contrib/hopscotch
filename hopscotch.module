@@ -1,6 +1,21 @@
 <?php
 
 /**
+ * Hopscotch constant for user-defined Tours.
+ */
+define('HOPSCOTCH_STORAGE_NORMAL', 1);
+
+/**
+ * Hopscotch constant for Tours that override module-defined presets.
+ */
+define('HOPSCOTCH_STORAGE_OVERRIDE', 2);
+
+/**
+ * Hopscotch constant for module-defined Tours.
+ */
+define('HOPSCOTCH_STORAGE_DEFAULT', 4);
+
+/**
  * Implements hook_libraries_info().
  * Return information about external libraries.
  *
@@ -45,7 +60,6 @@ function hopscotch_init() {
  */
 function hopscotch_get_path_tours() {
   $tours = hopscotch_load_all();
-  dpm($tours);
   $active_tours = array();
   foreach($tours as $name => $tour) {
     if($tour['enabled']) {

@@ -42,3 +42,51 @@ function hopscotch_requirements($phase) {
 
   return $requirements;
 }
+
+/**
+ * Upgrade existing tours.
+ */
+function hopscotch_update_1000() {
+  $config_names = config_get_names_with_prefix('hopscotch.');
+  foreach ($config_names as $config_name) {
+    $config = config($config_name);
+    $tour = $config->get(); 
+    if (isset($tour['tour'])) {
+      // Save the old 'tour' key then delete it.
+      $tour = $tour['tour'];
+      unset($tour['tour']);
+      // Delete the old 'config_name' key.
+      if (isset($tour['config_name'])) {
+        unset($tour['config_name']);
+      }
+      // Get the module name from the 'config_name' string.
+      list(, $module, ) = explode('.', $config_name);
+      $tour['module'] = $module;
+      // Now set storage values
+      if($tour['machine_name'] == 'manual_trigger' || $tour['machine_name'] == 'auto_start') {
+        $tour['storage'] = 2;
+      }
+      // Set all hopscotch produced tours that aren't the defaults to
+      // 'User-provided'.
+      elseif ($module == 'hopscotch') {
+        $tour['storage'] = 1;
+      }
+      else {
+        // Set all others to overidden to be safe.
+        $tour['storage'] = 2;
+      }
+      // Now save all 'hopscotch' tours as 'hopscotch_ui' tours.
+      if ($module == 'hopscotch') {
+        $config->delete();
+        $new_config = config('hopscotch.hopscotch_ui.' . $tour['machine_name']);
+        $new_config->setData($tour);
+        $new_config->save();
+      }
+      else {
+        $config->setData($tour);
+        $config->save();
+      }
+    }
+  }
+}
+
