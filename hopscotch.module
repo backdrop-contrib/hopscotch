@@ -150,6 +150,7 @@ function hopscotch_load_all() {
         $data = $config->get();
         $tours[$data['machine_name']] = $data;
       }
+      backdrop_alter('hopscotch_load', $tours);
       cache_set('hopscotch_tours', $tours, 'cache');
     }
   }
