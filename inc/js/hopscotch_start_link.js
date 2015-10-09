@@ -3,9 +3,11 @@
     attach:function (context, settings) {
       $(document).on('click', 'a.hopscotch-start-link', function(event) {
         event.preventDefault();
+        hoplink = $(this).attr('id').replace('hoplink-', '');
+        console.log(hoplink);
         tours = Backdrop.settings.hopscotchContext.tours;
         $.each( tours, function( key, value ) {
-          if(key == Backdrop.settings.hopscotchManualTrigger.tour_name) {
+          if(key == hoplink) {
             $.each( value["hopper"]['steps'], function( key, step ) {
               t1 = step['target'];
               q1 = step['query_selector'];
