@@ -1,7 +1,7 @@
 {
     "_config_name": "hopscotch.hopscotch.manual_trigger",
     "title": "Manual trigger demo",
-    "module": "hopscotch",
+    "module": "hopscotch_ui",
     "machine_name": "manual_trigger",
     "editable": 1,
     "paths": [
@@ -12,6 +12,11 @@
     "play_once": 0,
     "enabled": 1,
     "storage": 4,
+    "roles": {
+        "anonymous": 0,
+        "authenticated": "authenticated",
+        "administrator": "administrator"
+    },
     "content": {
         "0": {
             "title": "Stop #1",

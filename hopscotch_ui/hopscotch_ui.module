@@ -13,13 +13,13 @@ function hopscotch_ui_menu() {
   $items['admin/config/user-interface/hopscotch'] = array(
     'title' => 'Hopscotch',
     'page callback' => 'hopscotch_ui_list_hopscotch_tours',
-    'access arguments' => array('access administration pages'),
+    'access arguments' => array('administer hopscotch'),
     'type' => MENU_NORMAL_ITEM,
   );
 
   $items['admin/config/user-interface/hopscotch/ui'] = array(
     'title' => 'Hopscotch UI',
-    'access arguments' => array('access administration pages'),
+    'access arguments' => array('administer hopscotch'),
     'type' => MENU_DEFAULT_LOCAL_TASK,
   );
   
@@ -27,33 +27,33 @@ function hopscotch_ui_menu() {
     'title' => 'Tour editor',
     'page callback' => 'backdrop_get_form',
     'page arguments' => array('hopscotch_ui_edit_hopscotch', 5),
-    'access arguments' => array('access administration pages'),
+    'access arguments' => array('administer hopscotch'),
   );
   $items['admin/config/user-interface/hopscotch/ui/%/clone'] = array(
     'title' => 'Clone tour',
     'page callback' => 'backdrop_get_form',
     'page arguments' => array('hopscotch_ui_edit_hopscotch', 5, 6),
-    'access arguments' => array('access administration pages'),
+    'access arguments' => array('administer hopscotch'),
   );
 	$items['admin/config/user-interface/hopscotch/ui/%/disable'] = array(
 		'title' => 'Disable tour',
 		'page callback' => 'backdrop_get_form',
 		'page arguments' => array('hopscotch_ui_disable_hopscotch', 5, 6),
-    'access arguments' => array('access administration pages'),
+    'access arguments' => array('administer hopscotch'),
 		'type' => MENU_CALLBACK,
 	);  
 	$items['admin/config/user-interface/hopscotch/ui/%/revert'] = array(
 		'title' => 'Disable tour',
 		'page callback' => 'backdrop_get_form',
 		'page arguments' => array('hopscotch_ui_disable_hopscotch', 5, 6),
-    'access arguments' => array('access administration pages'),
+    'access arguments' => array('administer hopscotch'),
 		'type' => MENU_CALLBACK,
 	);  
   $items['admin/config/user-interface/hopscotch/ui/add'] = array(
     'title' => 'Add new tour',
     'page callback' => 'backdrop_get_form',
     'page arguments' => array('hopscotch_ui_edit_hopscotch', 5),
-    'access arguments' => array('access administration pages'),
+    'access arguments' => array('administer hopscotch'),
     'type' => MENU_LOCAL_ACTION,
   );
   
@@ -61,13 +61,13 @@ function hopscotch_ui_menu() {
     'title' => 'Hopscotch Demo (Start tour automatically)',
     'page callback' => 'theme',
     'page arguments' => array('hopscotch_demo'),
-    'access arguments' => array('access administration pages'),
+    'access arguments' => array('administer hopscotch'),
     'type' => MENU_LOCAL_TASK,
   );
 
   $items['admin/config/user-interface/hopscotch/demo/auto-start'] = array(
     'title' => 'Hopscotch Demo (Start tour automatically)',
-    'access arguments' => array('access administration pages'),
+    'access arguments' => array('administer hopscotch'),
     'type' => MENU_DEFAULT_LOCAL_TASK,
   );
 
@@ -75,7 +75,7 @@ function hopscotch_ui_menu() {
     'title' => 'Hopscotch Demo (Use manual trigger to start tour)',
     'page callback' => 'theme',
     'page arguments' => array('hopscotch_demo'),
-    'access arguments' => array('access administration pages'),
+    'access arguments' => array('administer hopscotch'),
     'type' => MENU_LOCAL_TASK,
   );
 
@@ -334,9 +334,15 @@ function hopscotch_ui_edit_hopscotch($form, &$form_state, $name, $op = NULL) {
     '#title' => t('Enabled'),
     '#default_value' => isset($tour['enabled']) ? $tour['enabled'] : 1,
   );
+  $form['roles'] = array(
+    '#type' => 'checkboxes',
+    '#title' => t('Roles'),
+    '#default_value' => isset($tour['roles']) ? $tour['roles'] : '',
+    '#options' => array_map('check_plain', user_roles()),
+  );
   $form['content'] = array(
     '#type' => 'fieldset',
-    '#title' => t('People coming to the picnic'),
+    '#title' => t('Content'),
     // Set up the wrapper so that AJAX will be able to replace the fieldset.
     '#prefix' => '<div id="steps-fieldset-wrapper">',
     '#suffix' => '</div>',
@@ -566,7 +572,7 @@ function hopscotch_ui_edit_hopscotch_submit($form, &$form_state) {
   // This is a new tour being added.
   if($name == 'add') {
     $data['storage'] = HOPSCOTCH_STORAGE_NORMAL;
-    $config = config('hopscotch.hopscotch.' . $form_state['values']['machine_name']);
+    $config = config('hopscotch.hopscotch_ui.' . $form_state['values']['machine_name']);
     $config->setData($data);
     $config->save();
   }
@@ -627,6 +633,7 @@ function theme_hopscotch_ui_edit_hopscotch($variables) {
   $output .= backdrop_render($form['editable']);
   $output .= backdrop_render($form['auto_start']);
   $output .= backdrop_render($form['play_once']);
+  $output .= backdrop_render($form['roles']);
   
   $add_more = $form['content']['add_more'];
   unset($form['content']['add_more']);

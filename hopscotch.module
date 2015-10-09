@@ -62,7 +62,7 @@ function hopscotch_get_path_tours() {
   $tours = hopscotch_load_all();
   $active_tours = array();
   foreach($tours as $name => $tour) {
-    if($tour['enabled']) {
+    if($tour['enabled'] && hopscotch_user_access($tour)) {
       foreach($tour['paths'] as $path) {
         if ($path == current_path() || $path == request_path() || ($path == '<front>' && request_path() == '')) {
           $active_tours[$name] = $tour;
@@ -73,6 +73,36 @@ function hopscotch_get_path_tours() {
   return $active_tours;
 }
 
+/**
+ *  Checks if the current user has access to this tour.
+ *  
+ */
+function hopscotch_user_access($tour) {
+  global $user;
+  if (user_access('view any tour') || user_access('administer hopscotch')) {
+    return TRUE;
+  }
+  elseif (isset($tour['roles'])) {
+    return array_intersect($tour['roles'], $user->roles);
+  }
+  return FALSE;
+}
+
+/**
+ *  Implementation of hook_permission.
+ */
+function hopscotch_permission() {
+  return array(
+    'administer hopscotch' => array(
+      'title' => t('Administer Hopscotch'),
+      'description' => t('Perform administration tasks for Hopscotch.'),
+    ),
+    'view any tour' => array(
+      'title' => t('View any Hopscotch tours'),
+      'description' => t('View any Hopscotch tour.'),
+    ),
+  );
+}
 
 /**
  *  Adds necessary javascript to the page to run a tour.

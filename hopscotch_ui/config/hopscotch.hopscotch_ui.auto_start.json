@@ -1,7 +1,7 @@
 {
     "_config_name": "hopscotch.hopscotch.auto_start",
     "title": "Auto start demo",
-    "module": "hopscotch",
+    "module": "hopscotch_ui",
     "machine_name": "auto_start",
     "editable": 1,
     "paths": [
@@ -12,6 +12,11 @@
     "play_once": 0,
     "enabled": 1,
     "storage": 4,
+    "roles": {
+        "anonymous": 0,
+        "authenticated": "authenticated",
+        "administrator": "administrator"
+    },
     "content": {
         "0": {
             "title": "Stop #1",
