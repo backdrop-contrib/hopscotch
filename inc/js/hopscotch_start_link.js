@@ -1,29 +1,27 @@
 (function ($) {
   Backdrop.behaviors.hopscotchManualTrigger = {
-    attach:function (context, settings) {
+  attach:function (context, settings) {
       $(document).on('click', 'a.hopscotch-start-link', function(event) {
         event.preventDefault();
         hoplink = $(this).attr('id').replace('hoplink-', '');
-        console.log(hoplink);
-        tours = Backdrop.settings.hopscotchContext.tours;
-        $.each( tours, function( key, value ) {
-          if(key == hoplink) {
-            $.each( value["hopper"]['steps'], function( key, step ) {
-              t1 = step['target'];
-              q1 = step['query_selector'];
-              i1 = step['query_selector_index'];
-              if(q1) {
-                if(i1) {
-                  value["hopper"]['steps'][key]['target'] = document.querySelectorAll(t1)[i1];
-                }
-                else {
-                  value["hopper"]['steps'][key]['target'] = document.querySelector(t1);
-                }
-              }
-            });
-            hopscotch.startTour(value["hopper"]);
+        var tours = Backdrop.settings.hopscotchContext.tours;
+        var tour = tours[hoplink];
+
+        $.each( tour["hopper"]['steps'], function( key, step ) {
+          var t1 = step['target'];
+          var q1 = step['query_selector'];
+          var i1 = step['query_selector_index'];
+          if(q1) {
+            if(i1) {
+              tour["hopper"]['steps'][key]['target'] = document.querySelectorAll(t1)[i1];
+            }
+            else {
+              tour["hopper"]['steps'][key]['target'] = document.querySelector(t1);
+            }
           }
         });
+        hopscotch.endTour();
+        hopscotch.startTour(tour["hopper"]);
 
         return false;
       });

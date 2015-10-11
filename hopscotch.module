@@ -148,6 +148,7 @@ function hopscotch_add_tours($active_tours) {
     $hopper['steps'] = $tour['content'];
     $tours[$tour_name]['hopper'] = $hopper;
     $tours[$tour_name]['auto_start'] = $tour['auto_start'];
+    $tours[$tour_name]['title'] = $tour['title'];
   }
   
   backdrop_add_js(backdrop_get_path('module', 'hopscotch') . '/inc/js/hopscotch_context.js', array('scope' => 'footer', 'weight' => 5));

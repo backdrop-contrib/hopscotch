@@ -568,10 +568,11 @@ function hopscotch_ui_edit_hopscotch_submit($form, &$form_state) {
   $form_state['values']['content'] = array_values($form_state['values']['content']);
   $data = $form_state['values'];
   $tour = array();
-  
+
   // This is a new tour being added.
   if($name == 'add') {
     $data['storage'] = HOPSCOTCH_STORAGE_NORMAL;
+    $data['module'] = 'hopscotch_ui';
     $config = config('hopscotch.hopscotch_ui.' . $form_state['values']['machine_name']);
     $config->setData($data);
     $config->save();
