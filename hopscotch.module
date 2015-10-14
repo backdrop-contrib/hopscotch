@@ -244,6 +244,17 @@ function hopscotch_block_view($delta = '') {
   return $block;
 }
 
+function hopscotch_block_configure($delta = '', $settings = array()) {
+  if ($delta == 'hopscotch_start_link' && module_exists('hopscotch_guide')) {
+    $form['guide_button'] = array (
+      '#type' => 'checkbox',
+      '#title' => 'Show as Guide Popup',
+      '#default_value' => isset($settings['guide_button']) ? $settings['guide_button'] : 0,
+    );
+    return $form;
+  }
+}
+
 /**
  * Return a list of links for the block.
  *
