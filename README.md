@@ -1,6 +1,9 @@
 Hopscotch
 =======
 
+The Hopscotch Library has been abandoned and is no longer maintained.
+====================================================================
+
 Description
 -----------
 
